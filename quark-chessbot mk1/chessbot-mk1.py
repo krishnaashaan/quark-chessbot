@@ -36,6 +36,75 @@ UNICODE_PIECES = {
     "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
     "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
 }
+
+# Piece-Square Tables (from white's perspective)
+# fmt: off
+PST_PAWN = [
+    0, 0, 0, 0, 0, 0, 0, 0,
+    50, 50, 50, 50, 50, 50, 50, 50,
+    10, 10, 20, 30, 30, 20, 10, 10,
+    5, 5, 10, 25, 25, 10, 5, 5,
+    0, 0, 0, 20, 20, 0, 0, 0,
+    5, -5, -10, 0, 0, -10, -5, 5,
+    5, 10, 10, -20, -20, 10, 10, 5,
+    0, 0, 0, 0, 0, 0, 0, 0
+]
+
+PST_KNIGHT = [
+    -50, -40, -30, -30, -30, -30, -40, -50,
+    -40, -20, 0, 0, 0, 0, -20, -40,
+    -30, 0, 10, 15, 15, 10, 0, -30,
+    -30, 5, 15, 20, 20, 15, 5, -30,
+    -30, 0, 15, 20, 20, 15, 0, -30,
+    -30, 5, 10, 15, 15, 10, 5, -30,
+    -40, -20, 0, 5, 5, 0, -20, -40,
+    -50, -40, -30, -30, -30, -30, -40, -50,
+]
+
+PST_BISHOP = [
+    -20, -10, -10, -10, -10, -10, -10, -20,
+    -10, 0, 0, 0, 0, 0, 0, -10,
+    -10, 0, 5, 10, 10, 5, 0, -10,
+    -10, 5, 5, 10, 10, 5, 5, -10,
+    -10, 0, 10, 10, 10, 10, 0, -10,
+    -10, 10, 10, 10, 10, 10, 10, -10,
+    -10, 5, 0, 0, 0, 0, 5, -10,
+    -20, -10, -10, -10, -10, -10, -10, -20,
+]
+
+PST_ROOK = [
+    0, 0, 0, 0, 0, 0, 0, 0,
+    5, 10, 10, 10, 10, 10, 10, 5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    0, 0, 0, 5, 5, 0, 0, 0
+]
+
+PST_QUEEN = [
+    -20, -10, -10, -5, -5, -10, -10, -20,
+    -10, 0, 0, 0, 0, 0, 0, -10,
+    -10, 0, 5, 5, 5, 5, 0, -10,
+    -5, 0, 5, 5, 5, 5, 0, -5,
+    0, 0, 5, 5, 5, 5, 0, -5,
+    -10, 5, 5, 5, 5, 5, 0, -10,
+    -10, 0, 5, 0, 0, 0, 0, -10,
+    -20, -10, -10, -5, -5, -10, -10, -20
+]
+
+PST_KING = [
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -20, -30, -30, -40, -40, -30, -30, -20,
+    -10, -20, -20, -20, -20, -20, -20, -10,
+    20, 20, 0, 0, 0, 0, 20, 20,
+    20, 30, 10, 0, 0, 10, 30, 20
+]
+# fmt: on
 INF = 10**9
 MATE_SCORE = 100000
 TT_EXACT, TT_LOWER, TT_UPPER = 0, 1, 2
@@ -59,39 +128,32 @@ def encode_board_planes(board: chess.Board, perspective_color: bool):
     return planes
 
 # ------------- Heuristic Evaluation -------------
-def centrality_bonus(file_idx: int, rank_idx: int) -> int:
-    df = abs(file_idx - 3.5)
-    dr = abs(rank_idx - 3.5)
-    return int((3.5 - max(df, dr)) * 4) if max(df, dr) <= 3.5 else 0
-
 def material_and_position_eval(board: chess.Board) -> int:
     if board.is_game_over():
         if board.is_checkmate():
             return -MATE_SCORE
         return 0
+
     score_white = 0
     score_black = 0
-    for pt, val in PIECE_VALUES.items():
-        wp = board.pieces(pt, chess.WHITE)
-        bp = board.pieces(pt, chess.BLACK)
-        score_white += len(wp) * val
-        score_black += len(bp) * val
-        if pt in (chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN):
-            for sq in wp:
-                r = chess.square_rank(sq)
-                f = chess.square_file(sq)
-                score_white += centrality_bonus(f, r)
-            for sq in bp:
-                r = 7 - chess.square_rank(sq)
-                f = chess.square_file(sq)
-                score_black += centrality_bonus(f, r)
-        elif pt == chess.PAWN:
-            for sq in wp:
-                r = chess.square_rank(sq)
-                score_white += r * 3
-            for sq in bp:
-                r = 7 - chess.square_rank(sq)
-                score_black += r * 3
+
+    # 1. Material score
+    for piece_type, value in PIECE_VALUES.items():
+        score_white += len(board.pieces(piece_type, chess.WHITE)) * value
+        score_black += len(board.pieces(piece_type, chess.BLACK)) * value
+
+    # 2. Positional score using PSTs
+    PST_MAP = {
+        chess.PAWN: PST_PAWN, chess.KNIGHT: PST_KNIGHT, chess.BISHOP: PST_BISHOP,
+        chess.ROOK: PST_ROOK, chess.QUEEN: PST_QUEEN, chess.KING: PST_KING,
+    }
+    for piece_type, pst in PST_MAP.items():
+        for sq in board.pieces(piece_type, chess.WHITE):
+            score_white += pst[sq]
+        for sq in board.pieces(piece_type, chess.BLACK):
+            score_black += pst[chess.square_mirror(sq)]
+
+    # 3. Mobility score
     my_moves = len(list(board.legal_moves))
     opp = board.copy()
     opp.turn = not board.turn
@@ -101,6 +163,32 @@ def material_and_position_eval(board: chess.Board) -> int:
         score_white += mobility
     else:
         score_black += mobility
+
+    # 4. King safety
+    for color in [chess.WHITE, chess.BLACK]:
+        king_sq = board.king(color)
+        if king_sq is not None:
+            king_safety_bonus = 0
+            # Define a shield mask around the king
+            shield_files = [chess.square_file(king_sq) - 1, chess.square_file(king_sq), chess.square_file(king_sq) + 1]
+            if color == chess.WHITE:
+                 # Pawns in front of the king
+                shield_rank = chess.square_rank(king_sq) + 1
+            else: # Black
+                shield_rank = chess.square_rank(king_sq) - 1
+
+            for file in shield_files:
+                if 0 <= file <= 7 and 0 <= shield_rank <= 7:
+                    sq = chess.square(file, shield_rank)
+                    piece = board.piece_at(sq)
+                    if piece is not None and piece.piece_type == chess.PAWN and piece.color == color:
+                        king_safety_bonus += 10 # Bonus for each pawn in the shield
+
+            if color == chess.WHITE:
+                score_white += king_safety_bonus
+            else:
+                score_black += king_safety_bonus
+
     base = score_white - score_black
     return base if board.turn == chess.WHITE else -base
 
@@ -128,7 +216,7 @@ class AlphaBetaEngine:
         self.time_limit: Optional[float] = None
         self.stop = False
 
-  
+
 
     def evaluate(self, board: chess.Board) -> int:
         heur = material_and_position_eval(board)
