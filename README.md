@@ -48,12 +48,6 @@ Developed as a focused exploration into engine design, this project emphasizes b
 
 ---
 
-## 📚 Inspiration
-
-This project is inspired by classical chess engine design principles and serves as a stepping stone toward more advanced AI-driven systems.
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License.
@@ -61,5 +55,7 @@ This project is licensed under the MIT License.
 ---
 
 ## 💡 Inspiration 
+This project is inspired by classical chess engine design principles and serves as a stepping stone toward more advanced AI-driven systems.
+
 Developed with curiosity and a passion for algorithms and game theory.
 
