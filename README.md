@@ -44,7 +44,7 @@ Developed as a focused exploration into engine design, this project emphasizes b
 * ♜ Transposition tables (Zobrist hashing)
 * ♛ Iterative deepening
 * 🤖 Neural network-based evaluation
-* 🌐 GUI integration or web interface
+
 
 ---
 
